@@ -1,3 +1,4 @@
+### voice.py : 음성파일을 텍스트로 변환하고 챗봇구현
 import streamlit as st
 from audiorecorder import audiorecorder
 from openai import OpenAI
@@ -6,21 +7,21 @@ from datetime import datetime
 from gtts import gTTS
 import base64
 
-# OpenAI �대씪�댁뼵�� 珥덇린��
+# OpenAI 클라이언트 초기화
 client = None
 
-##### 湲곕뒫 援ы쁽 �⑥닔 #####
+##### 기능 구현 함수 #####
 def STT(audio):
-    # �뚯씪 ����
+    # 파일 저장
     filename = 'input.mp3'
     audio.export(filename, format="mp3")
-    # �뚯썝 �뚯씪 �닿린
+    # 음원 파일 열기
     audio_file = open(filename, "rb")
-    # Whisper 紐⑤뜽�� �쒖슜�� �띿뒪�� �산린
+    # Whisper 모델을 활용해 텍스트 얻기
     transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
     
     audio_file.close()
-    # �뚯씪 ��젣
+    # 파일 삭제
     os.remove(filename)
     return transcript.text
 
@@ -30,12 +31,12 @@ def ask_gpt(prompt, model):
     return system_message.content
 
 def TTS(response):
-    # gTTS 瑜� �쒖슜�섏뿬 �뚯꽦 �뚯씪 �앹꽦
+    # gTTS 를 활용하여 음성 파일 생성
     filename = "output.mp3"
     tts = gTTS(text=response, lang="ko")
     tts.save(filename)
 
-    # �뚯썝 �뚯씪 �먮룞 �ъ깮
+    # 음원 파일 자동 재생
     with open(filename, "rb") as f:
         data = f.read()
         b64 = base64.b64encode(data).decode()
@@ -45,17 +46,17 @@ def TTS(response):
             </audio>
             """
         st.markdown(md, unsafe_allow_html=True)
-    # �뚯씪 ��젣
+    # 파일 삭제
     os.remove(filename)
 
-##### 硫붿씤 �⑥닔 #####
+##### 메인 함수 #####
 def main():
-    global client  # OpenAI �대씪�댁뼵�몃� �꾩뿭�먯꽌 �ъ슜�� �� �덈룄濡� �ㅼ젙
+    global client  # OpenAI 클라이언트를 전역에서 사용할 수 있도록 설정
 
-    # 湲곕낯 �ㅼ젙
-    st.set_page_config(page_title="�뚯꽦 鍮꾩꽌 �꾨줈洹몃옩", layout="wide")
+    # 기본 설정
+    st.set_page_config(page_title="음성 비서 프로그램", layout="wide")
 
-    # session state 珥덇린��
+    # session state 초기화
     if "chat" not in st.session_state:
         st.session_state["chat"] = []
 
@@ -65,71 +66,71 @@ def main():
     if "check_reset" not in st.session_state:
         st.session_state["check_reset"] = False
 
-    # �쒕ぉ 
-    st.header("�뚯꽦 鍮꾩꽌 �꾨줈洹몃옩")
+    # 제목 
+    st.header("음성 비서 프로그램")
     st.markdown("---")
 
-    # 湲곕낯 �ㅻ챸
-    with st.expander("�뚯꽦鍮꾩꽌 �꾨줈洹몃옩�� 愿��섏뿬", expanded=True):
+    # 기본 설명
+    with st.expander("음성비서 프로그램에 관하여", expanded=True):
         st.write(
         """     
-        - �뚯꽦鍮꾩꽌 �꾨줈洹몃옩�� UI�� �ㅽ듃由쇰┸�� �쒖슜�덉뒿�덈떎.
-        - STT(Speech-To-Text)�� OpenAI�� Whisper AI瑜� �쒖슜�덉뒿�덈떎. 
-        - �듬��� OpenAI�� GPT 紐⑤뜽�� �쒖슜�덉뒿�덈떎. 
-        - TTS(Text-To-Speech)�� 援ш��� Google Translate TTS瑜� �쒖슜�덉뒿�덈떎.
+        - 음성비서 프로그램의 UI는 스트림릿을 활용했습니다.
+        - STT(Speech-To-Text)는 OpenAI의 Whisper AI를 활용했습니다. 
+        - 답변은 OpenAI의 GPT 모델을 활용했습니다. 
+        - TTS(Text-To-Speech)는 구글의 Google Translate TTS를 활용했습니다.
         """
         )
 
-    # �ъ씠�쒕컮 �앹꽦
+    # 사이드바 생성
     with st.sidebar:
-        # Open AI API �� �낅젰諛쏄린
-        api_key = st.text_input(label="OPENAI API ��", placeholder="Enter Your API Key", value="", type="password")
+        # Open AI API 키 입력받기
+        api_key = st.text_input(label="OPENAI API 키", placeholder="Enter Your API Key", value="", type="password")
 
         if api_key:
-            # OpenAI �대씪�댁뼵�� �ㅼ젙
-            os.environ["OPENAI_API_KEY"] = api_key  # �섍꼍 蹂��섏뿉 API �� ����
-            client = OpenAI(api_key=api_key)  # �대씪�댁뼵�� �앹꽦
+            # OpenAI 클라이언트 설정
+            os.environ["OPENAI_API_KEY"] = api_key  # 환경 변수에 API 키 저장
+            client = OpenAI(api_key=api_key)  # 클라이언트 생성
 
         st.markdown("---")
 
-        # GPT 紐⑤뜽�� �좏깮�섍린 �꾪븳 �쇰뵒�� 踰꾪듉 �앹꽦
-        model = st.radio(label="GPT 紐⑤뜽", options=["gpt-4", "gpt-3.5-turbo"])
+        # GPT 모델을 선택하기 위한 라디오 버튼 생성
+        model = st.radio(label="GPT 모델", options=["gpt-4", "gpt-3.5-turbo"])
 
         st.markdown("---")
 
-        # 由ъ뀑 踰꾪듉 �앹꽦
-        if st.button(label="珥덇린��"):
+        # 리셋 버튼 생성
+        if st.button(label="초기화"):
             st.session_state["chat"] = []
             st.session_state["messages"] = [{"role": "system", "content": "You are a thoughtful assistant. Respond to all input in 25 words and answer in korean"}]
             st.session_state["check_reset"] = True
 
-    # 湲곕뒫 援ы쁽 怨듦컙
+    # 기능 구현 공간
     col1, col2 = st.columns(2)
     with col1:
-        # �쇱そ �곸뿭 �묒꽦
-        st.subheader("吏덈Ц�섍린")
+        # 왼쪽 영역 작성
+        st.subheader("질문하기")
         
-        # �뚯꽦 �뱀쓬 �꾩씠肄� 異붽�
-        audio = audiorecorder("�대┃�섏뿬 �뱀쓬�섍린", "�뱀쓬以�...")
+        # 음성 녹음 아이콘 추가
+        audio = audiorecorder("클릭하여 녹음하기", "녹음중...")
         
-        # '�대┃�섏뿬 �뱀쓬�섍린' 踰꾪듉�� �뚮졇�� �뚮쭔 API �� 泥댄겕
+        # '클릭하여 녹음하기' 버튼이 눌렸을 때만 API 키 체크
         if (audio.duration_seconds > 0) and (st.session_state["check_reset"] == False):
             if not api_key:
-                st.error("API �ㅻ� �낅젰�� 二쇱꽭��.")  # API �ㅺ� �놁쑝硫� 寃쎄퀬 硫붿떆吏� 異쒕젰
+                st.error("API 키를 입력해 주세요.")  # API 키가 없으면 경고 메시지 출력
             else:
-                # �뱀쓬�� �ㅻ뵒�ㅻ� 泥섎━
+                # 녹음된 오디오를 처리
                 st.audio(audio.export().read())
                 try:
-                    question = STT(audio)  # STT �⑥닔 �몄텧
+                    question = STT(audio)  # STT 함수 호출
                     now = datetime.now().strftime("%H:%M")
                     st.session_state["chat"] = st.session_state["chat"] + [("user", now, question)]
                     st.session_state["messages"] = st.session_state["messages"] + [{"role": "user", "content": question}]
                 except Exception as e:
-                    st.error(f"STT 蹂��� 以� �ㅻ쪟媛� 諛쒖깮�덉뒿�덈떎: {e}")
+                    st.error(f"STT 변환 중 오류가 발생했습니다: {e}")
 
     with col2:
-        # �ㅻⅨ履� �곸뿭 �묒꽦
-        st.subheader("吏덈Ц/�듬�")
+        # 오른쪽 영역 작성
+        st.subheader("질문/답변")
         if (audio.duration_seconds > 0) and (st.session_state["check_reset"] == False) and api_key:
             response = ask_gpt(st.session_state["messages"], model)
             st.session_state["messages"] = st.session_state["messages"] + [{"role": "system", "content": response}]
